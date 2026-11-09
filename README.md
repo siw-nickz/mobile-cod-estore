@@ -1,37 +1,32 @@
 # Mobile COD Electronics Store
 
-Go API (Render) + Next.js storefront (Netlify) + Neon Postgres + Cloudinary + Gmail SMTP.
+Next.js (storefront + `/v1` API on Netlify) + Neon Postgres + Cloudinary + Gmail SMTP.
 
 Ticket brief/plan: `siw-nickz-ai-common/tickets/NO-TICKET-2026-11-09-mobile-cod-electronic-store/`
 
 ## Layout
 
 ```
-backend/     Go API (:8080)
-frontend/    Next.js (App Router + Tailwind)
-docs/api.md  Stable /v1 contract
+app/           Next.js App Router (UI + serverless `/v1` API)
+migrations/    Postgres schema SQL (apply to Neon as needed)
+docs/api.md    Stable /v1 contract
 ```
 
 ## Local setup
 
-1. Copy `.env.example` → `backend/.env` and fill `DATABASE_URL` (Neon), `JWT_SECRET`.
-2. Backend:
+1. Copy root `.env.example` → `app/.env.local` and fill `DATABASE_URL`, `JWT_SECRET`, Cloudinary, SMTP.
+   Keep `NEXT_PUBLIC_API_BASE_URL` empty so the browser calls same-origin `/v1`.
+2. Ensure Neon schema exists (apply `migrations/001_init.up.sql` then `migrations/002_product_category.up.sql` if needed).
+3. App (Node 20+):
    ```bash
-   cd backend
-   go run ./cmd/api
-   ```
-   Migrations run on startup.
-3. Bootstrap first admin:
-   ```bash
-   curl -s localhost:8080/v1/admin/bootstrap -H 'Content-Type: application/json' \
-     -d '{"name":"Owner","email":"admin@example.com","password":"secret12","secret":"<JWT_SECRET>"}'
-   ```
-4. Frontend (requires Node 20+):
-   ```bash
-   cd frontend
-   cp ../.env.example .env.local   # set NEXT_PUBLIC_API_BASE_URL
+   cd app
    npm install
    npm run dev
+   ```
+4. Bootstrap first admin:
+   ```bash
+   curl -s localhost:3000/v1/admin/bootstrap -H 'Content-Type: application/json' \
+     -d '{"name":"Owner","email":"admin@example.com","password":"secret12","secret":"<JWT_SECRET>"}'
    ```
 5. Open http://localhost:3000 — `/admin` for import/orders/banner.
 
@@ -41,11 +36,10 @@ Admin → upload CSV matching the Freelancer sample columns. **Electronics (`Ele
 
 ## Deploy
 
-See `../siw-nickz-ai-common/tickets/NO-TICKET-2026-11-09-mobile-cod-electronic-store/out/deploy-steps.md` (or `out/deploy-steps.md` under the ticket once written).
-
-- **API:** Render Web Service, root `backend`, start `go run ./cmd/api` or build binary.
-- **Web:** Netlify, base `frontend`, build `npm run build`, publish `.next` / Next runtime.
-- Set `CORS_ORIGIN` to the Netlify URL; `NEXT_PUBLIC_API_BASE_URL` to the Render URL.
+- **App (UI + API):** Netlify, base directory `app`, `@netlify/plugin-nextjs`.
+- Set Netlify env vars from `.env.example` (`DATABASE_URL`, `JWT_SECRET`, Cloudinary, SMTP).
+- Leave `NEXT_PUBLIC_API_BASE_URL` empty (same-origin `/v1`).
+- Set `APP_URL` to the Netlify site URL (needed for SSR).
 
 ## Order & stock rules
 
@@ -56,4 +50,4 @@ See `../siw-nickz-ai-common/tickets/NO-TICKET-2026-11-09-mobile-cod-electronic-s
 
 ## Custom domain later
 
-Change Netlify / Render DNS settings only — no code change (EXT-2).
+Change Netlify DNS settings only — no code change (EXT-2).
